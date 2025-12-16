@@ -1,0 +1,740 @@
+@model LocalLLMChat.Models.LlmSettings
+@using System.Text.Json
+@{
+    ViewData["Title"] = "LLM Settings";
+    var settingsJson = JsonSerializer.Serialize(Model, new JsonSerializerOptions
+    {
+        PropertyNamingPolicy = JsonNamingPolicy.CamelCase
+    });
+}
+
+<div class="settings-shell">
+    <div class="settings-header">
+        <div class="title-group">
+            <p class="eyebrow">Control how the model loads and runs</p>
+            <h1>LLM Settings</h1>
+            <p class="subtitle">Tune load-time knobs like context length, threads, offload, cache, and RoPE overrides.</p>
+        </div>
+        <div class="action-group">
+            <a href="/Chat/Index" class="btn ghost" title="Back to chat">&larr; Back to Chat</a>
+            <span id="saveStatus" class="save-status">Saved</span>
+            <button id="saveButton" class="btn primary">Save</button>
+        </div>
+    </div>
+
+    <div class="tabs">
+        <button class="tab active" data-tab="load">Load</button>
+        <button class="tab" data-tab="prompt">Prompt</button>
+        <button class="tab" data-tab="inference">Inference</button>
+        <button class="tab" data-tab="speculative">Speculative Decoding</button>
+    </div>
+
+    <div class="tab-panels">
+        <div id="tab-load" class="tab-panel active">
+            <div class="grid">
+                <div class="card">
+                    <div class="card-header">
+                        <div>
+                            <p class="eyebrow">Context</p>
+                            <h3>Context Length</h3>
+                        </div>
+                        <span class="pill">Tokens</span>
+                    </div>
+                    <div class="control-row">
+                        <input type="range" min="256" max="262144" step="256" id="contextLengthRange" />
+                        <input type="number" id="contextLengthInput" class="numeric" />
+                    </div>
+                    <p class="hint">Higher context enables longer conversations but uses more memory.</p>
+                </div>
+
+                <div class="card">
+                    <div class="card-header">
+                        <div>
+                            <p class="eyebrow">GPU</p>
+                            <h3>GPU Offload Layers</h3>
+                        </div>
+                        <span id="gpuLayersLabel" class="pill muted">0 / 999</span>
+                    </div>
+                    <div class="control-row">
+                        <input type="range" min="0" max="999" step="1" id="gpuLayersRange" />
+                        <input type="number" id="gpuLayersInput" class="numeric" />
+                    </div>
+                    <p class="hint">Disable when CPU-only. If unsure, start low to reduce VRAM use.</p>
+                </div>
+
+                <div class="card">
+                    <div class="card-header">
+                        <div>
+                            <p class="eyebrow">Threads</p>
+                            <h3>CPU Thread Pool</h3>
+                        </div>
+                        <span class="pill muted">-1 = Auto</span>
+                    </div>
+                    <div class="control-row">
+                        <input type="range" min="-1" max="128" step="1" id="threadPoolRange" />
+                        <input type="number" id="threadPoolInput" class="numeric" />
+                    </div>
+                    <p class="hint">Limit threads to keep the UI responsive when running alongside other workloads.</p>
+                </div>
+
+                <div class="card">
+                    <div class="card-header">
+                        <div>
+                            <p class="eyebrow">Batching</p>
+                            <h3>Evaluation Batch Size</h3>
+                        </div>
+                        <span class="pill muted">Tokens / batch</span>
+                    </div>
+                    <div class="control-row">
+                        <input type="range" min="32" max="4096" step="16" id="batchSizeRange" />
+                        <input type="number" id="batchSizeInput" class="numeric" />
+                    </div>
+                    <p class="hint">Larger batches can improve throughput; very large values increase memory pressure.</p>
+                </div>
+
+                <div class="card">
+                    <div class="card-header">
+                        <div>
+                            <p class="eyebrow">RoPE</p>
+                            <h3>Frequency Base</h3>
+                        </div>
+                        <span class="pill muted">Optional</span>
+                    </div>
+                    <div class="toggle-row">
+                        <label class="switch">
+                            <input type="checkbox" id="ropeBaseToggle" />
+                            <span class="slider"></span>
+                        </label>
+                        <span>Override RoPE Base</span>
+                    </div>
+                    <div class="control-row rope-row">
+                        <input type="number" step="0.01" id="ropeBaseInput" class="numeric" />
+                        <span class="hint" id="ropeBaseAuto">Auto</span>
+                    </div>
+                    <p class="hint">Enable only if you know the model expects a non-default RoPE configuration.</p>
+                </div>
+
+                <div class="card">
+                    <div class="card-header">
+                        <div>
+                            <p class="eyebrow">RoPE</p>
+                            <h3>Frequency Scale</h3>
+                        </div>
+                        <span class="pill muted">Optional</span>
+                    </div>
+                    <div class="toggle-row">
+                        <label class="switch">
+                            <input type="checkbox" id="ropeScaleToggle" />
+                            <span class="slider"></span>
+                        </label>
+                        <span>Override RoPE Scale</span>
+                    </div>
+                    <div class="control-row rope-row">
+                        <input type="number" step="0.01" id="ropeScaleInput" class="numeric" />
+                        <span class="hint" id="ropeScaleAuto">Auto</span>
+                    </div>
+                    <p class="hint">Scaling can help long context support; leave disabled for defaults.</p>
+                </div>
+
+                <div class="card">
+                    <div class="card-header">
+                        <div>
+                            <p class="eyebrow">Memory</p>
+                            <h3>Offload KV Cache to GPU</h3>
+                        </div>
+                        <span class="pill muted">Experimental</span>
+                    </div>
+                    <div class="toggle-row">
+                        <label class="switch">
+                            <input type="checkbox" id="kvOffloadToggle" />
+                            <span class="slider"></span>
+                        </label>
+                        <span>Use GPU memory for K/V cache</span>
+                    </div>
+                    <p class="hint">Disable when running CPU-only or if you hit VRAM limits.</p>
+                </div>
+
+                <div class="card">
+                    <div class="card-header">
+                        <div>
+                            <p class="eyebrow">Caching</p>
+                            <h3>Keep Model in Memory</h3>
+                        </div>
+                        <span class="pill muted">Performance</span>
+                    </div>
+                    <div class="toggle-row">
+                        <label class="switch">
+                            <input type="checkbox" id="keepInMemoryToggle" />
+                            <span class="slider"></span>
+                        </label>
+                        <span>Reuse loaded weights between requests</span>
+                    </div>
+                    <p class="hint">Disable to free memory between calls (slower responses).</p>
+                </div>
+
+                <div class="card">
+                    <div class="card-header">
+                        <div>
+                            <p class="eyebrow">IO</p>
+                            <h3>Memory Map &amp; Lock</h3>
+                        </div>
+                        <span class="pill muted">Stability</span>
+                    </div>
+                    <div class="toggle-list">
+                        <div class="toggle-row">
+                            <label class="switch">
+                                <input type="checkbox" id="mmapToggle" />
+                                <span class="slider"></span>
+                            </label>
+                            <span>Try mmap()</span>
+                        </div>
+                        <div class="toggle-row">
+                            <label class="switch">
+                                <input type="checkbox" id="mlockToggle" />
+                                <span class="slider"></span>
+                            </label>
+                            <span>Use mlock()</span>
+                        </div>
+                        <div class="toggle-row">
+                            <label class="switch">
+                                <input type="checkbox" id="flashAttentionToggle" />
+                                <span class="slider"></span>
+                            </label>
+                            <span>Flash Attention (if supported)</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="card-header">
+                        <div>
+                            <p class="eyebrow">Seed</p>
+                            <h3>Random Seed</h3>
+                        </div>
+                        <span class="pill muted">Determinism</span>
+                    </div>
+                    <div class="toggle-row">
+                        <label class="switch">
+                            <input type="checkbox" id="randomSeedToggle" />
+                            <span class="slider"></span>
+                        </label>
+                        <span>Random Seed</span>
+                    </div>
+                    <div class="control-row seed-row">
+                        <input type="number" id="seedInput" class="numeric" />
+                        <span class="hint">Used when Random Seed is disabled.</span>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="card-header">
+                        <div>
+                            <p class="eyebrow">KV Cache</p>
+                            <h3>Cache Quantization</h3>
+                        </div>
+                        <span class="pill muted">Experimental</span>
+                    </div>
+                    <div class="toggle-row quant-row">
+                        <label class="switch">
+                            <input type="checkbox" id="kCacheToggle" />
+                            <span class="slider"></span>
+                        </label>
+                        <span>K Cache Type</span>
+                    </div>
+                    <input type="text" id="kCacheInput" class="numeric" placeholder="e.g., Q4_0, Q8_0" />
+                    <div class="toggle-row quant-row">
+                        <label class="switch">
+                            <input type="checkbox" id="vCacheToggle" />
+                            <span class="slider"></span>
+                        </label>
+                        <span>V Cache Type</span>
+                    </div>
+                    <input type="text" id="vCacheInput" class="numeric" placeholder="e.g., Q4_0, Q8_0" />
+                </div>
+
+                <div class="card">
+                    <div class="card-header">
+                        <div>
+                            <p class="eyebrow">Domain</p>
+                            <h3>Override Domain Type</h3>
+                        </div>
+                        <span class="pill muted">Placeholder</span>
+                    </div>
+                    <select id="domainOverride" class="select">
+                        <option value="No Override">No Override</option>
+                        <option value="General">General</option>
+                        <option value="Code">Code</option>
+                        <option value="Creative">Creative</option>
+                        <option value="Strict">Strict</option>
+                    </select>
+                    <p class="hint">Persisted only; applied when the engine exposes a matching hook.</p>
+                </div>
+
+                <div class="card cpu-only">
+                    <div class="card-header">
+                        <div>
+                            <p class="eyebrow">Mode</p>
+                            <h3>CPU Only</h3>
+                        </div>
+                        <span class="pill muted">Safety</span>
+                    </div>
+                    <div class="toggle-row">
+                        <label class="switch">
+                            <input type="checkbox" id="cpuOnlyToggle" />
+                            <span class="slider"></span>
+                        </label>
+                        <span>Disable GPU offload</span>
+                    </div>
+                    <p class="hint">Forces GPU layers and KV offload to zero.</p>
+                </div>
+            </div>
+        </div>
+
+        <div id="tab-prompt" class="tab-panel">
+            <div class="placeholder">
+                <h3>Prompt settings</h3>
+                <p>Coming soon.</p>
+            </div>
+        </div>
+        <div id="tab-inference" class="tab-panel">
+            <div class="placeholder">
+                <h3>Inference settings</h3>
+                <p>Coming soon.</p>
+            </div>
+        </div>
+        <div id="tab-speculative" class="tab-panel">
+            <div class="placeholder">
+                <h3>Speculative decoding</h3>
+                <p>Coming soon.</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    .settings-shell {
+        max-width: 1140px;
+        margin: 32px auto;
+        background: linear-gradient(135deg, rgba(255,255,255,0.9), rgba(247,250,255,0.95));
+        border: 1px solid #e5e7f0;
+        border-radius: 20px;
+        padding: 24px;
+        box-shadow: 0 24px 70px rgba(17, 24, 39, 0.15);
+        color: #0f172a;
+        position: relative;
+        overflow: hidden;
+    }
+
+    .settings-shell:before,
+    .settings-shell:after {
+        content: "";
+        position: absolute;
+        width: 220px;
+        height: 220px;
+        border-radius: 50%;
+        filter: blur(80px);
+        opacity: 0.35;
+        z-index: 0;
+    }
+
+    .settings-shell:before { background: #60a5fa; top: -60px; right: -40px; }
+    .settings-shell:after { background: #a78bfa; bottom: -70px; left: -50px; }
+
+    .settings-shell > * { position: relative; z-index: 1; }
+
+    .settings-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 16px;
+        margin-bottom: 18px;
+    }
+
+    .title-group h1 { margin: 0; font-size: 30px; }
+    .subtitle { margin: 4px 0 0 0; color: #475569; }
+
+    .action-group {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        flex-wrap: wrap;
+    }
+
+    .eyebrow {
+        color: #6b7280;
+        font-size: 12px;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        margin: 0 0 4px 0;
+    }
+
+    h3 { margin: 0; }
+
+    .tabs {
+        display: inline-flex;
+        gap: 8px;
+        margin-bottom: 14px;
+        padding: 6px;
+        border-radius: 12px;
+        background: #e2e8f0;
+        border: 1px solid #d7dce5;
+    }
+
+    .tab {
+        border: none;
+        padding: 10px 16px;
+        border-radius: 10px;
+        background: transparent;
+        cursor: pointer;
+        font-weight: 700;
+        color: #475569;
+        transition: all 0.15s ease;
+    }
+
+    .tab.active {
+        background: #ffffff;
+        color: #111827;
+        box-shadow: 0 8px 18px rgba(15, 23, 42, 0.1);
+    }
+
+    .tab-panels {
+        background: #fff;
+        border: 1px solid #e5e7eb;
+        border-radius: 16px;
+        padding: 16px;
+    }
+
+    .tab-panel { display: none; }
+    .tab-panel.active { display: block; }
+
+    .grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(290px, 1fr));
+        gap: 14px;
+    }
+
+    .card {
+        background: #ffffff;
+        border: 1px solid #e5e7eb;
+        border-radius: 16px;
+        padding: 16px;
+        box-shadow: 0 8px 20px rgba(0, 0, 0, 0.04);
+        transition: transform 0.12s ease, box-shadow 0.12s ease;
+    }
+
+    .card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 14px 28px rgba(15, 23, 42, 0.12);
+    }
+
+    .card-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-bottom: 10px;
+    }
+
+    .pill {
+        display: inline-block;
+        padding: 4px 10px;
+        border-radius: 999px;
+        font-size: 12px;
+        background: #eef2ff;
+        color: #4338ca;
+    }
+
+    .pill.muted { background: #f8fafc; color: #475569; }
+
+    .control-row { display: flex; align-items: center; gap: 10px; }
+
+    .numeric, .select, input[type="number"], input[type="text"] {
+        width: 100%;
+        padding: 10px 12px;
+        border-radius: 10px;
+        border: 1px solid #d1d5db;
+        font-size: 14px;
+        color: #0f172a;
+        background: #f8fafc;
+    }
+
+    input[type="range"] { flex: 1; accent-color: #2563eb; }
+
+    .toggle-row { display: flex; align-items: center; gap: 10px; margin: 6px 0; }
+
+    .switch { position: relative; display: inline-block; width: 44px; height: 24px; }
+    .switch input { opacity: 0; width: 0; height: 0; }
+
+    .slider {
+        position: absolute;
+        cursor: pointer;
+        top: 0; left: 0; right: 0; bottom: 0;
+        background-color: #cbd5e1;
+        transition: 0.2s;
+        border-radius: 24px;
+    }
+
+    .slider:before {
+        position: absolute;
+        content: "";
+        height: 18px;
+        width: 18px;
+        left: 3px;
+        bottom: 3px;
+        background-color: white;
+        transition: 0.2s;
+        border-radius: 50%;
+        box-shadow: 0 2px 8px rgba(15, 23, 42, 0.25);
+    }
+
+    .switch input:checked + .slider { background: linear-gradient(135deg, #2563eb, #4f46e5); }
+    .switch input:checked + .slider:before { transform: translateX(20px); }
+
+    .hint { color: #6b7280; font-size: 12px; margin-top: 4px; }
+    .toggle-list { display: flex; flex-direction: column; gap: 6px; }
+    .placeholder { padding: 20px; text-align: center; color: #6b7280; }
+
+    .btn {
+        border: none;
+        cursor: pointer;
+        border-radius: 12px;
+        font-weight: 700;
+        padding: 10px 16px;
+        transition: transform 0.12s ease, box-shadow 0.12s ease, opacity 0.12s ease;
+        text-decoration: none;
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+    }
+
+    .btn:hover { transform: translateY(-1px); }
+
+    .btn.primary {
+        background: linear-gradient(135deg, #2563eb, #4f46e5);
+        color: #fff;
+        box-shadow: 0 10px 30px rgba(37, 99, 235, 0.35);
+    }
+
+    .btn.ghost {
+        background: #ffffff;
+        color: #0f172a;
+        border: 1px solid #e2e8f0;
+    }
+
+    .save-status { font-weight: 600; color: #10b981; }
+
+    .rope-row, .seed-row, .quant-row { margin-top: 8px; }
+    .tab-panels .card.cpu-only { border: 1px dashed #cbd5e1; }
+
+    @@media (max-width: 768px) {
+        .settings-header { flex-direction: column; align-items: flex-start; }
+        .action-group { width: 100%; justify-content: flex-start; }
+        .grid { grid-template-columns: 1fr; }
+    }
+</style>
+
+<script>
+    const settingsState = @Html.Raw(settingsJson);
+    const debounceMs = 500;
+    let saveTimer = null;
+    let isSaving = false;
+    let pendingSave = false;
+    let initializing = true;
+
+    const el = (id) => document.getElementById(id);
+
+    function setStatus(text, tone = 'success') {
+        const status = el('saveStatus');
+        status.textContent = text;
+        status.style.color = tone === 'error' ? '#dc2626' : tone === 'warn' ? '#f59e0b' : '#10b981';
+    }
+
+    function bindRange(rangeId, inputId, propertyName, formatter) {
+        const range = el(rangeId);
+        const input = el(inputId);
+
+        const update = (value, skipSave) => {
+            const numeric = Number(value);
+            range.value = numeric;
+            input.value = numeric;
+            settingsState[propertyName] = numeric;
+            if (!skipSave) queueSave();
+        };
+
+        range.addEventListener('input', (e) => update(e.target.value));
+        input.addEventListener('input', (e) => update(e.target.value));
+
+        update(settingsState[propertyName] ?? 0, true);
+        if (formatter) formatter(settingsState[propertyName] ?? 0);
+    }
+
+    function bindToggle(toggleId, propertyName, onChange) {
+        const toggle = el(toggleId);
+        const set = (checked, skipSave) => {
+            toggle.checked = checked;
+            settingsState[propertyName] = checked;
+            if (onChange) onChange(checked);
+            if (!skipSave) queueSave();
+        };
+        toggle.addEventListener('change', (e) => set(e.target.checked));
+        set(Boolean(settingsState[propertyName]), true);
+    }
+
+    function bindInput(inputId, propertyName, onChange) {
+        const input = el(inputId);
+        const set = (value, skipSave) => {
+            input.value = value ?? '';
+            settingsState[propertyName] = value;
+            if (onChange) onChange(value);
+            if (!skipSave) queueSave();
+        };
+        input.addEventListener('input', (e) => set(e.target.value));
+        set(settingsState[propertyName] ?? '', true);
+    }
+
+    function queueSave() {
+        if (initializing) return;
+        if (isSaving) {
+            pendingSave = true;
+            return;
+        }
+        setStatus('Saving...', 'warn');
+        clearTimeout(saveTimer);
+        saveTimer = setTimeout(saveSettings, debounceMs);
+    }
+
+    async function saveSettings() {
+        isSaving = true;
+        clearTimeout(saveTimer);
+        const payload = buildPayload();
+
+        try {
+            const response = await fetch('/Settings/SaveLlm', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(payload)
+            });
+
+            const data = await response.json();
+            if (!response.ok || !data.ok) {
+                const errors = data.errors ? data.errors.join('\\n') : 'Failed to save settings.';
+                setStatus(errors, 'error');
+                isSaving = false;
+                return;
+            }
+
+            Object.assign(settingsState, data.settings);
+            setStatus(data.reloaded ? 'Saved (engine reloaded)' : 'Saved');
+        } catch (err) {
+            setStatus('Save failed', 'error');
+            console.error(err);
+        } finally {
+            isSaving = false;
+            if (pendingSave) {
+                pendingSave = false;
+                queueSave();
+            }
+        }
+    }
+
+    function buildPayload() {
+        const payload = {
+            cpuOnly: el('cpuOnlyToggle').checked,
+            contextLength: Number(el('contextLengthInput').value),
+            gpuOffloadLayers: Number(el('gpuLayersInput').value),
+            cpuThreadPoolSize: Number(el('threadPoolInput').value),
+            evaluationBatchSize: Number(el('batchSizeInput').value),
+            ropeFrequencyBaseEnabled: el('ropeBaseToggle').checked,
+            ropeFrequencyBase: el('ropeBaseToggle').checked ? Number(el('ropeBaseInput').value || 0) : null,
+            ropeFrequencyScaleEnabled: el('ropeScaleToggle').checked,
+            ropeFrequencyScale: el('ropeScaleToggle').checked ? Number(el('ropeScaleInput').value || 0) : null,
+            offloadKvCacheToGpu: el('kvOffloadToggle').checked,
+            keepModelInMemory: el('keepInMemoryToggle').checked,
+            tryMmap: el('mmapToggle').checked,
+            useMlock: el('mlockToggle').checked,
+            randomSeed: el('randomSeedToggle').checked,
+            seed: Number(el('seedInput').value || 0),
+            flashAttention: el('flashAttentionToggle').checked,
+            kCacheQuantTypeEnabled: el('kCacheToggle').checked,
+            kCacheQuantType: el('kCacheInput').value,
+            vCacheQuantTypeEnabled: el('vCacheToggle').checked,
+            vCacheQuantType: el('vCacheInput').value,
+            overrideDomainType: el('domainOverride').value
+        };
+
+        return payload;
+    }
+
+    function initTabs() {
+        const tabs = document.querySelectorAll('.tab');
+        tabs.forEach((tab) => {
+            tab.addEventListener('click', () => {
+                document.querySelectorAll('.tab, .tab-panel').forEach(el => el.classList.remove('active'));
+                tab.classList.add('active');
+                document.getElementById(`tab-${tab.dataset.tab}`).classList.add('active');
+            });
+        });
+    }
+
+    function init() {
+        initTabs();
+        bindRange('contextLengthRange', 'contextLengthInput', 'contextLength');
+        bindRange('gpuLayersRange', 'gpuLayersInput', 'gpuOffloadLayers', (val) => {
+            el('gpuLayersLabel').textContent = `${val} / 999`;
+        });
+        bindRange('threadPoolRange', 'threadPoolInput', 'cpuThreadPoolSize');
+        bindRange('batchSizeRange', 'batchSizeInput', 'evaluationBatchSize');
+
+        bindToggle('cpuOnlyToggle', 'cpuOnly', (checked) => {
+            const disabled = checked;
+            el('gpuLayersRange').disabled = disabled;
+            el('gpuLayersInput').disabled = disabled;
+            el('kvOffloadToggle').disabled = disabled;
+        });
+
+        bindToggle('kvOffloadToggle', 'offloadKvCacheToGpu');
+        bindToggle('keepInMemoryToggle', 'keepModelInMemory');
+        bindToggle('mmapToggle', 'tryMmap');
+        bindToggle('mlockToggle', 'useMlock');
+        bindToggle('flashAttentionToggle', 'flashAttention');
+        bindToggle('randomSeedToggle', 'randomSeed', (checked) => {
+            el('seedInput').disabled = checked;
+            el('seedInput').style.opacity = checked ? '0.5' : '1';
+        });
+        bindToggle('ropeBaseToggle', 'ropeFrequencyBaseEnabled', (checked) => {
+            el('ropeBaseInput').style.display = checked ? 'block' : 'none';
+            el('ropeBaseAuto').style.display = checked ? 'none' : 'inline-block';
+        });
+        bindToggle('ropeScaleToggle', 'ropeFrequencyScaleEnabled', (checked) => {
+            el('ropeScaleInput').style.display = checked ? 'block' : 'none';
+            el('ropeScaleAuto').style.display = checked ? 'none' : 'inline-block';
+        });
+        bindToggle('kCacheToggle', 'kCacheQuantTypeEnabled', (checked) => {
+            el('kCacheInput').disabled = !checked;
+            el('kCacheInput').style.opacity = checked ? '1' : '0.6';
+        });
+        bindToggle('vCacheToggle', 'vCacheQuantTypeEnabled', (checked) => {
+            el('vCacheInput').disabled = !checked;
+            el('vCacheInput').style.opacity = checked ? '1' : '0.6';
+        });
+
+        bindInput('ropeBaseInput', 'ropeFrequencyBase');
+        bindInput('ropeScaleInput', 'ropeFrequencyScale');
+        bindInput('seedInput', 'seed');
+        bindInput('kCacheInput', 'kCacheQuantType');
+        bindInput('vCacheInput', 'vCacheQuantType');
+        bindInput('domainOverride', 'overrideDomainType');
+
+        el('saveButton').addEventListener('click', () => {
+            clearTimeout(saveTimer);
+            saveSettings();
+        });
+
+        setStatus('Saved');
+        initializing = false;
+    }
+
+    document.addEventListener('DOMContentLoaded', init);
+</script>
+

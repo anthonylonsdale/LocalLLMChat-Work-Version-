@@ -1,0 +1,2120 @@
+﻿@{
+    ViewData["Title"] = "Chat";
+}
+
+@section Styles {
+<style>
+    :root {
+        --gradient-main: linear-gradient(135deg, #b91c1c 0%, #ef4444 50%, #f97316 100%);
+        --gradient-strong: linear-gradient(135deg, #dc2626 0%, #ef4444 50%, #f97316 100%);
+        --gradient-horizontal: linear-gradient(90deg, #b91c1c 0%, #ef4444 50%, #f97316 100%);
+    }
+
+    .chat-wrapper {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        min-height: 100vh;
+        padding: 20px;
+    }
+
+    .chat-card {
+        width: 100%;
+        max-width: 800px;
+        height: 90vh;
+        background: rgba(255, 255, 255, 0.95);
+        border-radius: 24px;
+        box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+        display: flex;
+        flex-direction: column;
+        overflow: hidden;
+        transition: max-width 0.3s ease;
+    }
+
+    .chat-card.panel-open {
+        max-width: 1400px;
+    }
+
+    .chat-container {
+        display: flex;
+        height: 100%;
+    }
+
+    .chat-main {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        min-width: 0;
+    }
+
+    .chat-header {
+        padding: 20px 24px;
+        border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+    }
+
+    .chat-header h1 {
+        font-size: 1.25rem;
+        font-weight: 600;
+        color: #1a1a2e;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+    }
+
+    .chat-header h1 svg {
+        width: 28px;
+        height: 28px;
+    }
+
+    .header-actions {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+
+    .header-toggle {
+        width: 40px;
+        height: 40px;
+        border-radius: 12px;
+        border: 1px solid #e5e7eb;
+        background: white;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: all 0.2s;
+        text-decoration: none;
+        color: inherit;
+    }
+
+    .header-toggle:hover {
+        background: #f3f4f6;
+        border-color: #d1d5db;
+    }
+
+    .header-toggle.active {
+        background: #e0f2fe;
+        border-color: #7dd3fc;
+        color: #0ea5e9;
+    }
+
+    .header-toggle svg {
+        width: 20px;
+        height: 20px;
+    }
+
+    .status-pill {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 6px 14px;
+        background: #f0fdf4;
+        border-radius: 20px;
+        font-size: 0.8rem;
+        color: #166534;
+        font-weight: 500;
+    }
+
+    .status-pill.loading {
+        background: #fef3c7;
+        color: #92400e;
+    }
+
+    .status-pill.error {
+        background: #fef2f2;
+        color: #dc2626;
+    }
+
+    .status-dot {
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        background: #22c55e;
+    }
+
+    .status-pill.loading .status-dot {
+        background: #f59e0b;
+        animation: pulse 1.5s infinite;
+    }
+
+    .status-pill.error .status-dot {
+        background: #dc2626;
+    }
+
+    @@keyframes pulse {
+        0%, 100% { opacity: 1; }
+        50% { opacity: 0.5; }
+    }
+
+    .chat-messages {
+        flex: 1;
+        overflow-y: auto;
+        padding: 24px;
+        display: flex;
+        flex-direction: column;
+        gap: 16px;
+        background: #fafafa;
+    }
+
+    .message {
+        max-width: 75%;
+        padding: 14px 18px;
+        border-radius: 18px;
+        line-height: 1.5;
+        font-size: 0.95rem;
+        white-space: pre-wrap;
+        word-wrap: break-word;
+        animation: fadeIn 0.3s ease;
+    }
+
+    @@keyframes fadeIn {
+        from { opacity: 0; transform: translateY(10px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
+
+    .message.user {
+        background: var(--gradient-main);
+        color: white;
+        align-self: flex-end;
+        border-bottom-right-radius: 6px;
+    }
+
+    .message.assistant {
+        background: white;
+        color: #374151;
+        align-self: flex-start;
+        border-bottom-left-radius: 6px;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+    }
+
+    .message.system {
+        background: transparent;
+        color: #9ca3af;
+        align-self: center;
+        font-size: 0.85rem;
+        padding: 8px 16px;
+    }
+
+    .chat-input-area {
+        padding: 20px 24px;
+        border-top: 1px solid rgba(0, 0, 0, 0.06);
+        background: white;
+    }
+
+    .input-container {
+        display: flex;
+        gap: 12px;
+        align-items: flex-end;
+    }
+
+    .input-wrapper {
+        flex: 1;
+        position: relative;
+    }
+
+    .chat-input {
+        width: 100%;
+        padding: 14px 18px;
+        border: 2px solid #e5e7eb;
+        border-radius: 16px;
+        font-size: 0.95rem;
+        font-family: inherit;
+        outline: none;
+        resize: none;
+        transition: border-color 0.2s, box-shadow 0.2s;
+        max-height: 150px;
+        background: #f9fafb;
+    }
+
+    .chat-input:focus {
+        border-color: #0ea5e9;
+        box-shadow: 0 0 0 3px rgba(14, 165, 233, 0.15);
+        background: white;
+    }
+
+    .chat-input::placeholder {
+        color: #9ca3af;
+    }
+
+    .send-btn {
+        width: 48px;
+        height: 48px;
+        border-radius: 14px;
+        border: none;
+        background: var(--gradient-main);
+        color: white;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: transform 0.2s, box-shadow 0.2s;
+        flex-shrink: 0;
+    }
+
+    .send-btn:hover:not(:disabled) {
+        transform: scale(1.05);
+        box-shadow: 0 4px 12px rgba(14, 165, 233, 0.4);
+    }
+
+    .send-btn:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+    }
+
+    .send-btn svg {
+        width: 20px;
+        height: 20px;
+    }
+
+    .actions-bar {
+        display: flex;
+        gap: 8px;
+        margin-top: 12px;
+    }
+
+    .action-btn {
+        padding: 8px 14px;
+        background: transparent;
+        border: 1px solid #e5e7eb;
+        border-radius: 10px;
+        font-size: 0.8rem;
+        color: #6b7280;
+        cursor: pointer;
+        transition: all 0.2s;
+        font-family: inherit;
+    }
+
+    .action-btn:hover {
+        background: #f3f4f6;
+        border-color: #d1d5db;
+    }
+
+    .action-btn.active {
+        background: #e0f2fe;
+        border-color: #bae6fd;
+        color: #0ea5e9;
+    }
+
+    .welcome-container {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        height: 100%;
+        text-align: center;
+        padding: 40px;
+    }
+
+    .welcome-icon {
+        width: 64px;
+        height: 64px;
+        background: var(--gradient-strong);
+        border-radius: 20px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin-bottom: 20px;
+    }
+
+    .welcome-icon svg {
+        width: 32px;
+        height: 32px;
+        color: white;
+    }
+
+    .welcome-container h2 {
+        font-size: 1.5rem;
+        color: #1f2937;
+        margin-bottom: 8px;
+    }
+
+    .welcome-container p {
+        color: #6b7280;
+        font-size: 0.95rem;
+    }
+
+    .typing-indicator {
+        display: flex;
+        gap: 4px;
+        padding: 14px 18px;
+        background: white;
+        border-radius: 18px;
+        border-bottom-left-radius: 6px;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+        align-self: flex-start;
+    }
+
+    .typing-indicator span {
+        width: 8px;
+        height: 8px;
+        background: #9ca3af;
+        border-radius: 50%;
+        animation: typing 1.4s infinite ease-in-out;
+    }
+
+    .typing-indicator span:nth-child(2) { animation-delay: 0.2s; }
+    .typing-indicator span:nth-child(3) { animation-delay: 0.4s; }
+
+    @@keyframes typing {
+        0%, 60%, 100% { transform: translateY(0); }
+        30% { transform: translateY(-4px); }
+    }
+
+    /* Side Panel (Settings & Diagnostics) */
+    .side-panel {
+        width: 0;
+        overflow: hidden;
+        border-left: 1px solid rgba(0, 0, 0, 0.06);
+        background: white;
+        transition: width 0.3s ease;
+        display: flex;
+        flex-direction: column;
+    }
+
+    .side-panel.open {
+        width: 400px;
+    }
+
+    .panel-tabs {
+        display: flex;
+        border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+    }
+
+    .panel-tab {
+        flex: 1;
+        padding: 14px;
+        background: none;
+        border: none;
+        font-size: 0.85rem;
+        font-weight: 500;
+        color: #6b7280;
+        cursor: pointer;
+        transition: all 0.2s;
+        border-bottom: 2px solid transparent;
+    }
+
+    .panel-tab:hover {
+        color: #374151;
+        background: #f9fafb;
+    }
+
+    .panel-tab.active {
+        color: #0ea5e9;
+        border-bottom-color: #0ea5e9;
+    }
+
+    .panel-content {
+        flex: 1;
+        overflow-y: auto;
+        display: none;
+    }
+
+    .panel-content.active {
+        display: flex;
+        flex-direction: column;
+    }
+
+    .panel-section {
+        padding: 16px 20px;
+        border-bottom: 1px solid rgba(0, 0, 0, 0.04);
+    }
+
+    .panel-section h3 {
+        font-size: 0.7rem;
+        font-weight: 600;
+        color: #9ca3af;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        margin-bottom: 12px;
+    }
+
+    /* Settings Panel Styles */
+    .setting-item {
+        margin-bottom: 14px;
+    }
+
+    .setting-label {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 6px;
+    }
+
+    .setting-label span {
+        font-size: 0.8rem;
+        color: #374151;
+    }
+
+    .setting-value {
+        font-size: 0.75rem;
+        color: #6b7280;
+        font-family: monospace;
+        background: #f3f4f6;
+        padding: 2px 6px;
+        border-radius: 4px;
+    }
+
+    .setting-slider {
+        width: 100%;
+        height: 5px;
+        -webkit-appearance: none;
+        appearance: none;
+        background: #e5e7eb;
+        border-radius: 3px;
+        outline: none;
+    }
+
+    .setting-slider::-webkit-slider-thumb {
+        -webkit-appearance: none;
+        width: 16px;
+        height: 16px;
+        background: var(--gradient-main);
+        border-radius: 50%;
+        cursor: pointer;
+    }
+
+    .setting-input, .setting-textarea {
+        width: 100%;
+        padding: 8px 12px;
+        border: 1px solid #e5e7eb;
+        border-radius: 8px;
+        font-size: 0.8rem;
+        font-family: inherit;
+        outline: none;
+    }
+
+    .setting-textarea {
+        resize: vertical;
+        min-height: 60px;
+    }
+
+    .setting-input:focus, .setting-textarea:focus {
+        border-color: #0ea5e9;
+    }
+
+    .panel-footer {
+        padding: 12px 20px;
+        border-top: 1px solid rgba(0, 0, 0, 0.06);
+        display: flex;
+        gap: 8px;
+    }
+
+    .panel-btn {
+        flex: 1;
+        padding: 8px 14px;
+        border-radius: 8px;
+        font-size: 0.8rem;
+        font-weight: 500;
+        cursor: pointer;
+        font-family: inherit;
+    }
+
+    .panel-btn.primary {
+        background: var(--gradient-main);
+        color: white;
+        border: none;
+    }
+
+    .panel-btn.secondary {
+        background: white;
+        color: #6b7280;
+        border: 1px solid #e5e7eb;
+    }
+
+    .system-prompt {
+        width: 100%;
+        border-radius: 10px;
+        border: 1px solid #e5e7eb;
+        padding: 14px;
+        font-size: 0.95rem;
+        background: linear-gradient(180deg, #fff7f7 0%, #ffffff 90%);
+        min-height: 110px;
+        box-shadow: inset 0 1px 2px rgba(0,0,0,0.04);
+    }
+
+    .panel-content {
+        padding-bottom: 32px;
+    }
+
+    .panel-note {
+        font-size: 0.78rem;
+        color: #6b7280;
+        margin-top: 6px;
+    }
+
+    .header-toggle.rag {
+        width: auto;
+        padding: 0 12px;
+        font-weight: 700;
+        border-color: #fecdd3;
+        color: #b91c1c;
+        background: #fff1f2;
+    }
+
+    .header-toggle.rag.active {
+        background: var(--gradient-main);
+        color: white;
+        border-color: transparent;
+        box-shadow: 0 6px 14px rgba(185, 28, 28, 0.3);
+    }
+
+    .header-toggle.ghost {
+        background: #fffaf0;
+        border-color: #fecdd3;
+        color: #b91c1c;
+    }
+
+    /* Diagnostics Panel Styles */
+    .diag-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 10px;
+    }
+
+    .diag-card {
+        background: #f9fafb;
+        border-radius: 10px;
+        padding: 12px;
+    }
+
+    .diag-card.full-width {
+        grid-column: span 2;
+    }
+
+    .diag-label {
+        font-size: 0.65rem;
+        color: #9ca3af;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        margin-bottom: 4px;
+    }
+
+    .diag-value {
+        font-size: 1.1rem;
+        font-weight: 600;
+        color: #1f2937;
+        font-family: 'SF Mono', Monaco, monospace;
+    }
+
+    .diag-value.small {
+        font-size: 0.85rem;
+    }
+
+    .diag-unit {
+        font-size: 0.7rem;
+        color: #6b7280;
+        font-weight: normal;
+        margin-left: 2px;
+    }
+
+    /* Progress bar */
+    .progress-bar {
+        height: 6px;
+        background: #e5e7eb;
+        border-radius: 3px;
+        overflow: hidden;
+        margin-top: 8px;
+    }
+
+    .progress-fill {
+        height: 100%;
+        background: var(--gradient-horizontal);
+        border-radius: 3px;
+        transition: width 0.3s ease;
+    }
+
+    /* Token stream */
+    .token-stream {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 4px;
+        max-height: 120px;
+        overflow-y: auto;
+    }
+
+    .token-chip {
+        display: inline-flex;
+        align-items: center;
+        padding: 3px 8px;
+        background: #f3f4f6;
+        border-radius: 6px;
+        font-size: 0.7rem;
+        font-family: monospace;
+        border: 1px solid #e5e7eb;
+    }
+
+    .token-chip .prob {
+        margin-left: 4px;
+        color: #9ca3af;
+        font-size: 0.6rem;
+    }
+
+    .token-chip.high-prob {
+        background: #dcfce7;
+        border-color: #86efac;
+    }
+
+    .token-chip.med-prob {
+        background: #fef3c7;
+        border-color: #fcd34d;
+    }
+
+    .token-chip.low-prob {
+        background: #fee2e2;
+        border-color: #fca5a5;
+    }
+
+    /* Generation indicator */
+    .gen-indicator {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 10px 14px;
+        background: linear-gradient(90deg, #e0f2fe 0%, #dbeafe 100%);
+        border-radius: 8px;
+        margin-bottom: 12px;
+    }
+
+    .gen-indicator.generating {
+        background: linear-gradient(90deg, #fff7ed 0%, #ffedd5 100%);
+        animation: gen-pulse 2s infinite;
+    }
+
+    @@keyframes gen-pulse {
+        0%, 100% { opacity: 1; }
+        50% { opacity: 0.7; }
+    }
+
+    .gen-dot {
+        width: 10px;
+        height: 10px;
+        border-radius: 50%;
+        background: #22c55e;
+    }
+
+    .gen-indicator.generating .gen-dot {
+        background: #f59e0b;
+        animation: pulse 1s infinite;
+    }
+
+    .gen-text {
+        font-size: 0.8rem;
+        font-weight: 500;
+        color: #166534;
+    }
+
+    .gen-indicator.generating .gen-text {
+        color: #92400e;
+    }
+
+    /* Entropy visualization */
+    .entropy-bar {
+        display: flex;
+        height: 24px;
+        border-radius: 6px;
+        overflow: hidden;
+        background: #f3f4f6;
+    }
+
+    .entropy-segment {
+        transition: width 0.3s ease;
+    }
+
+    /* Info row */
+    .info-row {
+        display: flex;
+        justify-content: space-between;
+        padding: 6px 0;
+        font-size: 0.8rem;
+        border-bottom: 1px solid #f3f4f6;
+    }
+
+    .info-row:last-child {
+        border-bottom: none;
+    }
+
+    .info-label {
+        color: #6b7280;
+    }
+
+    .info-value {
+        color: #1f2937;
+        font-weight: 500;
+        font-family: monospace;
+    }
+
+    /* Candidates list */
+    .candidates-list {
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+    }
+
+    .candidate-row {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 6px 10px;
+        background: #f9fafb;
+        border-radius: 6px;
+        font-size: 0.75rem;
+    }
+
+    .candidate-row.selected {
+        background: linear-gradient(90deg, #dcfce7 0%, #bbf7d0 100%);
+        border: 1px solid #86efac;
+    }
+
+    .candidate-rank {
+        width: 18px;
+        height: 18px;
+        background: #e5e7eb;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 0.65rem;
+        font-weight: 600;
+        color: #6b7280;
+    }
+
+    .candidate-row.selected .candidate-rank {
+        background: #22c55e;
+        color: white;
+    }
+
+    .candidate-token {
+        flex: 1;
+        font-family: monospace;
+        color: #374151;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+
+    .candidate-prob-bar {
+        flex: 1;
+        min-width: 120px;
+        height: 8px;
+        background: #e5e7eb;
+        border-radius: 4px;
+        overflow: hidden;
+    }
+
+    .candidate-prob-fill {
+        height: 100%;
+        background: var(--gradient-horizontal);
+        border-radius: 4px;
+        transition: width 0.2s;
+    }
+
+    .candidate-prob {
+        width: 64px;
+        text-align: right;
+        font-family: monospace;
+        color: #6b7280;
+        font-size: 0.7rem;
+    }
+
+    /* Scrollbar styling */
+    .chat-messages::-webkit-scrollbar,
+    .panel-content::-webkit-scrollbar,
+    .token-stream::-webkit-scrollbar {
+        width: 5px;
+    }
+
+    .chat-messages::-webkit-scrollbar-track,
+    .panel-content::-webkit-scrollbar-track,
+    .token-stream::-webkit-scrollbar-track {
+        background: transparent;
+    }
+
+    .chat-messages::-webkit-scrollbar-thumb,
+    .panel-content::-webkit-scrollbar-thumb,
+    .token-stream::-webkit-scrollbar-thumb {
+        background: #d1d5db;
+        border-radius: 3px;
+    }
+
+    /* Debug overlay */
+    .debug-panel {
+        position: fixed;
+        top: 12px;
+        left: 12px;
+        width: 280px;
+        max-height: 40vh;
+        background: rgba(15, 23, 42, 0.9);
+        color: #f3f4f6;
+        border-radius: 10px;
+        padding: 10px;
+        z-index: 9999;
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.25);
+    }
+
+    .debug-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 8px;
+    }
+
+    .debug-panel h4 {
+        margin: 0;
+        font-size: 0.9rem;
+        font-weight: 600;
+        letter-spacing: 0.3px;
+    }
+
+    .debug-toggle {
+        border: none;
+        background: rgba(255, 255, 255, 0.08);
+        color: #f3f4f6;
+        border-radius: 6px;
+        width: 28px;
+        height: 28px;
+        cursor: pointer;
+        font-weight: 700;
+        line-height: 1;
+    }
+
+    .debug-log {
+        overflow-y: auto;
+        max-height: 30vh;
+        font-size: 0.78rem;
+        line-height: 1.3;
+        padding-right: 4px;
+    }
+
+    .debug-panel.collapsed {
+        max-height: 42px;
+        padding-bottom: 8px;
+    }
+
+    .debug-panel.collapsed .debug-log {
+        display: none;
+    }
+
+    .debug-entry {
+        margin-bottom: 4px;
+        color: #e5e7eb;
+        word-break: break-word;
+    }
+
+    .debug-entry time {
+        color: #9ca3af;
+        margin-right: 6px;
+        font-size: 0.72rem;
+    }
+</style>
+}
+
+<div class="debug-panel" id="debugPanel">
+    <div class="debug-header">
+        <h4>Debug Log</h4>
+        <button class="debug-toggle" id="debugToggle" aria-label="Toggle debug log">–</button>
+    </div>
+    <div id="debugLog" class="debug-log"></div>
+</div>
+
+<div class="chat-wrapper">
+    <div class="chat-card" id="chatCard">
+        <div class="chat-container">
+            <div class="chat-main">
+                <div class="chat-header">
+                    <h1>
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+                        </svg>
+                        llama-2-7b-chat.Q4_K_S Demo
+                    </h1>
+                    <div class="header-actions">
+                        <div id="statusPill" class="status-pill">
+                            <span class="status-dot"></span>
+                            <span id="statusText">Ready</span>
+                        </div>
+                        <button class="header-toggle rag" id="ragToggle" onclick="toggleRag()" title="Toggle offline RAG">
+                            <span id="ragToggleLabel">RAG Off</span>
+                        </button>
+                        <button class="header-toggle ghost" id="ragIngestBtn" onclick="ingestRag()" title="Rebuild offline RAG index">
+                            ⟳
+                        </button>
+                        <button class="header-toggle" id="panelToggle" onclick="togglePanel()" title="Settings & Diagnostics">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <rect x="3" y="3" width="7" height="7"/>
+                                <rect x="14" y="3" width="7" height="7"/>
+                                <rect x="14" y="14" width="7" height="7"/>
+                                <rect x="3" y="14" width="7" height="7"/>
+                            </svg>
+                        </button>
+                    </div>
+                </div>
+
+                <div id="chatMessages" class="chat-messages">
+                    <div class="welcome-container" id="welcomeScreen">
+                        <div class="welcome-icon">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <circle cx="12" cy="12" r="10"/>
+                                <path d="M8 14s1.5 2 4 2 4-2 4-2"/>
+                                <line x1="9" y1="9" x2="9.01" y2="9"/>
+                                <line x1="15" y1="9" x2="15.01" y2="9"/>
+                            </svg>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="chat-input-area">
+                    <div class="input-container">
+                        <div class="input-wrapper">
+                            <textarea id="chatInput" class="chat-input" placeholder="Type your message..." rows="1"
+                                onkeydown="handleKeyDown(event)" oninput="autoResize(this)"></textarea>
+                        </div>
+                        <button id="sendBtn" class="send-btn" onclick="sendMessage()">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <line x1="22" y1="2" x2="11" y2="13"/>
+                                <polygon points="22 2 15 22 11 13 2 9 22 2"/>
+                            </svg>
+                        </button>
+                    </div>
+                    <div class="actions-bar">
+                        <button class="action-btn" onclick="clearChat()">Clear chat</button>
+                        <button class="action-btn" id="streamToggle" onclick="toggleStreaming()">Streaming: ON</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Side Panel (Settings & Diagnostics) -->
+            <div class="side-panel" id="sidePanel">
+                <div class="panel-tabs">
+                    <button class="panel-tab active" onclick="switchTab('diagnostics')">Diagnostics</button>
+                    <button class="panel-tab" onclick="switchTab('settings')">Settings</button>
+                </div>
+
+                <!-- Diagnostics Panel -->
+                <div class="panel-content active" id="diagnosticsPanel">
+                    <div class="panel-section">
+                        <div class="gen-indicator" id="genIndicator">
+                            <div class="gen-dot"></div>
+                            <span class="gen-text" id="genStatus">Idle</span>
+                        </div>
+
+                        <div class="diag-grid">
+                            <div class="diag-card">
+                                <div class="diag-label">Tokens/sec</div>
+                                <div class="diag-value" id="diagTps">0.00</div>
+                            </div>
+                            <div class="diag-card">
+                                <div class="diag-label">Generated</div>
+                                <div class="diag-value" id="diagTokens">0<span class="diag-unit">tokens</span></div>
+                            </div>
+                            <div class="diag-card">
+                                <div class="diag-label">Time to First</div>
+                                <div class="diag-value" id="diagTtft">-<span class="diag-unit">ms</span></div>
+                            </div>
+                            <div class="diag-card">
+                                <div class="diag-label">Total Time</div>
+                                <div class="diag-value" id="diagTotal">-<span class="diag-unit">ms</span></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="panel-section">
+                        <h3>Context Window</h3>
+                        <div class="diag-card full-width">
+                            <div style="display: flex; justify-content: space-between; margin-bottom: 6px;">
+                                <span class="diag-label">Utilization</span>
+                                <span class="diag-value small" id="diagCtxPercent">0%</span>
+                            </div>
+                            <div class="progress-bar">
+                                <div class="progress-fill" id="diagCtxBar" style="width: 0%"></div>
+                            </div>
+                            <div style="display: flex; justify-content: space-between; margin-top: 6px; font-size: 0.7rem; color: #9ca3af;">
+                                <span id="diagCtxUsed">0</span>
+                                <span id="diagCtxSize">/ 0 tokens</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="panel-section">
+                        <h3>Entropy & Perplexity</h3>
+                        <div class="diag-grid">
+                            <div class="diag-card">
+                                <div class="diag-label">Avg Entropy</div>
+                                <div class="diag-value small" id="diagEntropy">0.0000</div>
+                            </div>
+                            <div class="diag-card">
+                                <div class="diag-label">Est. Perplexity</div>
+                                <div class="diag-value small" id="diagPerplexity">0.00</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="panel-section">
+                        <h3>Memory</h3>
+                        <div class="info-row">
+                            <span class="info-label">Model Size</span>
+                            <span class="info-value" id="diagModelMem">-</span>
+                        </div>
+                        <div class="info-row">
+                            <span class="info-label">KV Cache</span>
+                            <span class="info-value" id="diagCtxMem">-</span>
+                        </div>
+                    </div>
+
+                    <div class="panel-section">
+                        <h3>Active Sampling</h3>
+                        <div class="info-row">
+                            <span class="info-label">Temperature</span>
+                            <span class="info-value" id="diagTemp">0.70</span>
+                        </div>
+                        <div class="info-row">
+                            <span class="info-label">Top-P</span>
+                            <span class="info-value" id="diagTopP">0.90</span>
+                        </div>
+                        <div class="info-row">
+                            <span class="info-label">Top-K</span>
+                            <span class="info-value" id="diagTopK">40</span>
+                        </div>
+                        <div class="info-row">
+                            <span class="info-label">Repeat Penalty</span>
+                            <span class="info-value" id="diagRepeat">1.10</span>
+                        </div>
+                    </div>
+
+                    <div class="panel-section">
+                        <h3>Top Candidates (Last Token)</h3>
+                        <div id="topCandidates" class="candidates-list">
+                            <span style="color: #9ca3af; font-size: 0.75rem;">Sampling candidates will appear here...</span>
+                        </div>
+                    </div>
+
+                    <div class="panel-section" style="flex: 1;">
+                        <h3>Token Stream</h3>
+                        <div class="token-stream" id="tokenStream">
+                            <span style="color: #9ca3af; font-size: 0.75rem;">Tokens will appear here during generation...</span>
+                        </div>
+                    </div>
+                </div>
+
+                                <!-- Settings Panel -->
+                <div class="panel-content" id="settingsPanel">
+                    <div class="panel-section">
+                        <h3>Model Info</h3>
+                        <div class="info-row">
+                            <span class="info-label">Model</span>
+                            <span class="info-value" id="modelName" style="max-width: 150px; overflow: hidden; text-overflow: ellipsis;">-</span>
+                        </div>
+                        <div class="info-row">
+                            <span class="info-label">Context</span>
+                            <span class="info-value" id="contextSize">-</span>
+                        </div>
+                        <div class="info-row">
+                            <span class="info-label">GPU Layers</span>
+                            <span class="info-value" id="gpuLayers">-</span>
+                        </div>
+                    </div>
+
+                    <div class="panel-section">
+                        <h3>Offline Knowledge (RAG)</h3>
+                        <div class="info-row">
+                            <span class="info-label">Status</span>
+                            <span class="info-value" id="ragStatusLabel">Disabled</span>
+                        </div>
+                        <div class="panel-buttons" style="gap: 8px; display: flex; margin-top: 10px;">
+                            <button class="panel-btn secondary" type="button" onclick="toggleRag()">Toggle RAG</button>
+                            <button class="panel-btn primary" type="button" id="ragPanelIngestBtn" onclick="ingestRag()">Build / Refresh Index</button>
+                        </div>
+                        <p class="panel-note">
+                            Uses only local files. Place docs under <code>App_Data/RagDocs</code> and ONNX model/tokenizer under <code>App_Data/models/all-minilm-l6-v2/</code>. Reload to apply.
+                        </p>
+                        <div class="panel-buttons" style="gap: 8px; display: flex; margin-top: 10px;">
+                            <button class="panel-btn secondary" type="button" onclick="togglePanel()">Back to Chat</button>
+                        </div>
+                    </div>
+
+                    <div class="panel-section">
+                        <h3>Load Settings</h3>
+                        <div class="setting-item">
+                            <div class="setting-label">
+                                <span>Context Length</span>
+                                <span class="setting-value" id="lsContextValue">4096</span>
+                            </div>
+                            <input type="range" class="setting-slider" id="lsContextLength" min="256" max="262144" step="256" oninput="updateLoadSlider('lsContextLength','lsContextValue')">
+                        </div>
+                        <div class="setting-item">
+                            <div class="setting-label">
+                                <span>GPU Offload Layers</span>
+                                <span class="setting-value" id="lsGpuValue">0</span>
+                            </div>
+                            <input type="range" class="setting-slider" id="lsGpuLayers" min="0" max="999" step="1" oninput="updateLoadSlider('lsGpuLayers','lsGpuValue')">
+                        </div>
+                        <div class="setting-item">
+                            <div class="setting-label">
+                                <span>CPU Threads (-1 auto)</span>
+                                <span class="setting-value" id="lsThreadsValue">-1</span>
+                            </div>
+                            <input type="range" class="setting-slider" id="lsThreads" min="-1" max="128" step="1" oninput="updateLoadSlider('lsThreads','lsThreadsValue')">
+                        </div>
+                        <div class="setting-item">
+                            <div class="setting-label">
+                                <span>Batch Size</span>
+                                <span class="setting-value" id="lsBatchValue">512</span>
+                            </div>
+                            <input type="range" class="setting-slider" id="lsBatch" min="32" max="4096" step="16" oninput="updateLoadSlider('lsBatch','lsBatchValue')">
+                        </div>
+                        <div class="setting-item">
+                            <label class="setting-label">
+                                <span>CPU Only</span>
+                                <input type="checkbox" id="lsCpuOnly">
+                            </label>
+                        </div>
+                        <div class="setting-item">
+                            <label class="setting-label">
+                                <span>Offload KV Cache to GPU</span>
+                                <input type="checkbox" id="lsKvOffload">
+                            </label>
+                        </div>
+                        <div class="setting-item">
+                            <label class="setting-label">
+                                <span>Keep Model in Memory</span>
+                                <input type="checkbox" id="lsKeepInMemory">
+                            </label>
+                        </div>
+                        <div class="setting-item">
+                            <label class="setting-label">
+                                <span>Try mmap()</span>
+                                <input type="checkbox" id="lsMmap">
+                            </label>
+                        </div>
+                        <div class="setting-item">
+                            <label class="setting-label">
+                                <span>Use mlock()</span>
+                                <input type="checkbox" id="lsMlock">
+                            </label>
+                        </div>
+                        <div class="setting-item">
+                            <label class="setting-label">
+                                <span>Flash Attention</span>
+                                <input type="checkbox" id="lsFlash">
+                            </label>
+                        </div>
+                        <div class="setting-item">
+                            <label class="setting-label">
+                                <span>Random Seed</span>
+                                <input type="checkbox" id="lsRandomSeed">
+                            </label>
+                            <input type="number" class="setting-input" id="lsSeed" value="0">
+                        </div>
+                        <div class="setting-item">
+                            <label class="setting-label">
+                                <span>RoPE Base (optional)</span>
+                                <input type="checkbox" id="lsRopeBaseEnabled">
+                            </label>
+                            <input type="number" class="setting-input" id="lsRopeBase" step="0.01">
+                        </div>
+                        <div class="setting-item">
+                            <label class="setting-label">
+                                <span>RoPE Scale (optional)</span>
+                                <input type="checkbox" id="lsRopeScaleEnabled">
+                            </label>
+                            <input type="number" class="setting-input" id="lsRopeScale" step="0.01">
+                        </div>
+                        <div class="setting-item">
+                            <label class="setting-label">
+                                <span>K Cache Quant (exp)</span>
+                                <input type="checkbox" id="lsKCacheEnabled">
+                            </label>
+                            <input type="text" class="setting-input" id="lsKCacheType" placeholder="e.g., Q4_0">
+                        </div>
+                        <div class="setting-item">
+                            <label class="setting-label">
+                                <span>V Cache Quant (exp)</span>
+                                <input type="checkbox" id="lsVCacheEnabled">
+                            </label>
+                            <input type="text" class="setting-input" id="lsVCacheType" placeholder="e.g., Q4_0">
+                        </div>
+                        <div class="setting-item">
+                            <div class="setting-label">
+                                <span>Override Domain</span>
+                            </div>
+                            <select id="lsDomain" class="setting-input">
+                                <option>No Override</option>
+                                <option>General</option>
+                                <option>Code</option>
+                                <option>Creative</option>
+                                <option>Strict</option>
+                            </select>
+                        </div>
+                        <div class="panel-buttons">
+                            <button class="panel-btn primary" onclick="saveLoadSettings()">Save Load Settings</button>
+                        </div>
+                    </div>
+
+                    <div class="panel-section">
+                        <h3>Generation</h3>
+                        <div class="setting-item">
+                            <div class="setting-label">
+                                <span>Max Tokens</span>
+                                <span class="setting-value" id="maxTokensValue">1024</span>
+                            </div>
+                            <input type="range" class="setting-slider" id="maxTokens" min="64" max="4096" step="64" value="1024" oninput="updateSlider('maxTokens')">
+                        </div>
+                        <div class="setting-item">
+                            <div class="setting-label">
+                                <span>Temperature</span>
+                                <span class="setting-value" id="temperatureValue">0.70</span>
+                            </div>
+                            <input type="range" class="setting-slider" id="temperature" min="0" max="2" step="0.05" value="0.7" oninput="updateSlider('temperature')">
+                        </div>
+                        <div class="setting-item">
+                            <div class="setting-label">
+                                <span>Top P</span>
+                                <span class="setting-value" id="topPValue">0.90</span>
+                            </div>
+                            <input type="range" class="setting-slider" id="topP" min="0" max="1" step="0.05" value="0.9" oninput="updateSlider('topP')">
+                        </div>
+                        <div class="setting-item">
+                            <div class="setting-label">
+                                <span>Top K</span>
+                                <span class="setting-value" id="topKValue">40</span>
+                            </div>
+                            <input type="range" class="setting-slider" id="topK" min="1" max="100" step="1" value="40" oninput="updateSlider('topK')">
+                        </div>
+                        <div class="setting-item">
+                            <div class="setting-label">
+                                <span>Min P</span>
+                                <span class="setting-value" id="minPValue">0.05</span>
+                            </div>
+                            <input type="range" class="setting-slider" id="minP" min="0" max="1" step="0.01" value="0.05" oninput="updateSlider('minP')">
+                        </div>
+                    </div>
+
+                    <div class="panel-section">
+                        <h3>Penalties</h3>
+                        <div class="setting-item">
+                            <div class="setting-label">
+                                <span>Repeat Penalty</span>
+                                <span class="setting-value" id="repeatPenaltyValue">1.10</span>
+                            </div>
+                            <input type="range" class="setting-slider" id="repeatPenalty" min="1" max="2" step="0.05" value="1.1" oninput="updateSlider('repeatPenalty')">
+                        </div>
+                        <div class="setting-item">
+                            <div class="setting-label">
+                                <span>Repeat Last N</span>
+                                <span class="setting-value" id="repeatLastNValue">64</span>
+                            </div>
+                            <input type="range" class="setting-slider" id="repeatLastN" min="0" max="256" step="8" value="64" oninput="updateSlider('repeatLastN')">
+                        </div>
+                        <div class="setting-item">
+                            <div class="setting-label">
+                                <span>Frequency Penalty</span>
+                                <span class="setting-value" id="frequencyPenaltyValue">0.00</span>
+                            </div>
+                            <input type="range" class="setting-slider" id="frequencyPenalty" min="0" max="2" step="0.05" value="0" oninput="updateSlider('frequencyPenalty')">
+                        </div>
+                        <div class="setting-item">
+                            <div class="setting-label">
+                                <span>Presence Penalty</span>
+                                <span class="setting-value" id="presencePenaltyValue">0.00</span>
+                            </div>
+                            <input type="range" class="setting-slider" id="presencePenalty" min="0" max="2" step="0.05" value="0" oninput="updateSlider('presencePenalty')">
+                        </div>
+                    </div>
+
+                    <div class="panel-section">
+                        <h3>Advanced</h3>
+                        <div class="setting-item">
+                            <div class="setting-label">
+                                <span>Seed (-1 = random)</span>
+                                <span class="setting-value" id="seedValue">-1</span>
+                            </div>
+                            <input type="number" class="setting-input" id="seed" value="-1" oninput="document.getElementById('seedValue').textContent = this.value">
+                        </div>
+                    </div>
+
+                    <div class="panel-section">
+                        <h3>System Prompt</h3>
+                        <textarea id="systemPrompt" class="system-prompt" rows="4" placeholder="Enter system prompt..."></textarea>
+                    </div>
+
+                    <div class="panel-buttons">
+                        <button class="panel-btn secondary" onclick="resetSettings()">Reset</button>
+                        <button class="panel-btn primary" onclick="applySettings()">Apply</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+<script>
+    let sessionId = '@ViewBag.SessionId';
+    let isStreaming = true;
+    let isProcessing = false;
+    let welcomeVisible = true;
+    let panelOpen = false;
+    let currentSettings = null;
+    let loadSettingsState = null;
+    let diagUpdateInterval = null;
+    let debugCount = 0;
+    let lastServerLogId = 0;
+    let useRag = false;
+
+    const chatMessages = document.getElementById('chatMessages');
+    const chatInput = document.getElementById('chatInput');
+    const sendBtn = document.getElementById('sendBtn');
+    const statusPill = document.getElementById('statusPill');
+    const statusText = document.getElementById('statusText');
+    const debugLog = document.getElementById('debugLog');
+    const debugPanel = document.getElementById('debugPanel');
+    const debugToggle = document.getElementById('debugToggle');
+
+    document.addEventListener('DOMContentLoaded', () => {
+        chatInput.focus();
+        loadSettings();
+        loadLoadSettings();
+        startDiagnosticsPolling();
+        startDiagnosticsStream();
+        setInterval(fetchServerDebugLog, 2000);
+        syncRagUi();
+
+        if (debugToggle && debugPanel) {
+            debugToggle.addEventListener('click', () => {
+                debugPanel.classList.toggle('collapsed');
+            });
+        }
+
+        ['lsCpuOnly','lsRandomSeed','lsRopeBaseEnabled','lsRopeScaleEnabled','lsKCacheEnabled','lsVCacheEnabled'].forEach(id => {
+            const el = document.getElementById(id);
+            if (el) el.addEventListener('change', applyLoadDependencies);
+        });
+    });
+
+    function logEvent(message) {
+        if (!debugLog) return;
+        const entry = document.createElement('div');
+        entry.className = 'debug-entry';
+        const now = new Date();
+        entry.innerHTML = `<time>[${now.toLocaleTimeString()}]</time>${message}`;
+        debugLog.prepend(entry);
+        debugCount++;
+
+        while (debugLog.children.length > 80) {
+            debugLog.removeChild(debugLog.lastChild);
+        }
+    }
+
+    function syncRagUi() {
+        const toggle = document.getElementById('ragToggle');
+        const toggleLabel = document.getElementById('ragToggleLabel');
+        const statusLabel = document.getElementById('ragStatusLabel');
+
+        if (toggle) {
+            toggle.classList.toggle('active', useRag);
+        }
+        if (toggleLabel) {
+            toggleLabel.textContent = useRag ? 'RAG On' : 'RAG Off';
+        }
+        if (statusLabel) {
+            statusLabel.textContent = useRag ? 'Enabled' : 'Disabled';
+        }
+    }
+
+    function toggleRag() {
+        useRag = !useRag;
+        syncRagUi();
+        logEvent(`RAG mode ${useRag ? 'enabled' : 'disabled'}.`);
+    }
+
+    async function ingestRag() {
+        const btn = document.getElementById('ragIngestBtn');
+        const panelBtn = document.getElementById('ragPanelIngestBtn');
+        if (btn) btn.disabled = true;
+        if (panelBtn) panelBtn.disabled = true;
+        addMessage('Rebuilding offline knowledge index...', 'system');
+        logEvent('Starting RAG ingest...');
+        try {
+            const res = await fetch('/Rag/Ingest', { method: 'POST' });
+            const data = await res.json().catch(() => ({}));
+            if (!res.ok || data.ok === false) {
+                throw new Error(data.error || `Status ${res.status}`);
+            }
+            logEvent('RAG ingest complete.');
+            addMessage('Offline knowledge refreshed.', 'system');
+        } catch (err) {
+            logEvent(`RAG ingest failed: ${err.message}`);
+            addMessage('RAG ingest failed. See debug log.', 'system');
+        } finally {
+            if (btn) btn.disabled = false;
+            if (panelBtn) panelBtn.disabled = false;
+        }
+    }
+
+    function formatContentWarning() {
+        return 'Warning: response blocked (policy or inference error). See debug log for details.';
+    }
+
+    function stripStopSequences(text) {
+        let result = text ?? '';
+        for (const seq of stopSequences) {
+            while (result.endsWith(seq)) {
+                result = result.slice(0, result.length - seq.length);
+            }
+        }
+        return result;
+    }
+
+    function sanitizeAssistantText(text) {
+        if (!text) return '';
+        const stripped = stripStopSequences(text);
+        return stripped.trimEnd();
+    }
+
+    function formatServerTime(value) {
+        if (!value) return 'n/a';
+        const parsed = new Date(value);
+        return isNaN(parsed.getTime()) ? 'n/a' : parsed.toLocaleTimeString();
+    }
+
+    function startDiagnosticsStream() {
+        try {
+            const es = new EventSource('/Chat/StreamDiagnostics');
+            es.onmessage = (evt) => {
+                if (!evt.data) return;
+                try {
+                    const d = JSON.parse(evt.data);
+                    logEvent(`Diag: ${d.status} | gen=${d.generatedTokenCount} | t/s=${d.tokensPerSecond}`);
+                } catch {
+                    // ignore parse errors
+                }
+            };
+            es.onerror = () => {
+                logEvent('Diag stream error; retrying in 5s');
+                es.close();
+                setTimeout(startDiagnosticsStream, 5000);
+            };
+        } catch (e) {
+            logEvent('Diag stream failed: ' + e.message);
+        }
+    }
+
+    async function fetchServerDebugLog() {
+        try {
+            const res = await fetch('/Chat/GetDebugLog');
+            if (!res.ok) return;
+            const entries = await res.json();
+            if (!Array.isArray(entries)) return;
+
+            entries
+                .filter(e => e.id > lastServerLogId)
+                .forEach(e => {
+                    const ts = formatServerTime(e.timestamp);
+                    logEvent(`[srv:${e.source}] ${e.message} ${ts}`);
+                    lastServerLogId = Math.max(lastServerLogId, e.id);
+                });
+        } catch {
+            // ignore
+        }
+    }
+
+    function autoResize(el) {
+        el.style.height = 'auto';
+        el.style.height = Math.min(el.scrollHeight, 150) + 'px';
+    }
+
+    function setStatus(state, text) {
+        statusPill.className = 'status-pill ' + state;
+        statusText.textContent = text;
+    }
+
+    function handleKeyDown(event) {
+        if (event.key === 'Enter' && !event.shiftKey) {
+            event.preventDefault();
+            sendMessage();
+        }
+    }
+
+    function toggleStreaming() {
+        isStreaming = !isStreaming;
+        const btn = document.getElementById('streamToggle');
+        btn.textContent = 'Streaming: ' + (isStreaming ? 'ON' : 'OFF');
+        btn.classList.toggle('active', isStreaming);
+    }
+
+    function togglePanel() {
+        panelOpen = !panelOpen;
+        document.getElementById('sidePanel').classList.toggle('open', panelOpen);
+        document.getElementById('chatCard').classList.toggle('panel-open', panelOpen);
+        document.getElementById('panelToggle').classList.toggle('active', panelOpen);
+    }
+
+    function switchTab(tab) {
+        document.querySelectorAll('.panel-tab').forEach(t => t.classList.remove('active'));
+        document.querySelectorAll('.panel-content').forEach(p => p.classList.remove('active'));
+
+        document.querySelector(`.panel-tab[onclick="switchTab('${tab}')"]`).classList.add('active');
+        document.getElementById(tab + 'Panel').classList.add('active');
+    }
+
+    function updateSlider(id) {
+        const slider = document.getElementById(id);
+        const valueSpan = document.getElementById(id + 'Value');
+        let value = parseFloat(slider.value);
+
+        if (['temperature', 'topP', 'minP', 'repeatPenalty', 'frequencyPenalty', 'presencePenalty'].includes(id)) {
+            valueSpan.textContent = value.toFixed(2);
+        } else {
+            valueSpan.textContent = value;
+        }
+    }
+
+    // Diagnostics polling
+    function startDiagnosticsPolling() {
+        updateDiagnostics();
+        diagUpdateInterval = setInterval(updateDiagnostics, 500);
+    }
+
+    async function updateDiagnostics() {
+        try {
+            const response = await fetch('/Chat/GetDiagnostics');
+            const d = await response.json();
+
+            // Update generation indicator
+            const genIndicator = document.getElementById('genIndicator');
+            const genStatus = document.getElementById('genStatus');
+            if (d.isGenerating) {
+                genIndicator.classList.add('generating');
+                genStatus.textContent = d.status;
+            } else {
+                genIndicator.classList.remove('generating');
+                genStatus.textContent = d.status || 'Idle';
+            }
+
+            // Update stats
+            document.getElementById('diagTps').textContent = d.tokensPerSecond.toFixed(2);
+            document.getElementById('diagTokens').innerHTML = d.generatedTokenCount + '<span class="diag-unit">tokens</span>';
+            document.getElementById('diagTtft').innerHTML = (d.timeToFirstTokenMs > 0 ? d.timeToFirstTokenMs.toFixed(0) : '-') + '<span class="diag-unit">ms</span>';
+            document.getElementById('diagTotal').innerHTML = (d.totalInferenceTimeMs > 0 ? d.totalInferenceTimeMs.toFixed(0) : '-') + '<span class="diag-unit">ms</span>';
+
+            // Context
+            document.getElementById('diagCtxPercent').textContent = d.contextUtilization.toFixed(1) + '%';
+            document.getElementById('diagCtxBar').style.width = Math.min(d.contextUtilization, 100) + '%';
+            document.getElementById('diagCtxUsed').textContent = d.contextUsed;
+            document.getElementById('diagCtxSize').textContent = '/ ' + d.contextSize + ' tokens';
+
+            // Entropy & Perplexity
+            document.getElementById('diagEntropy').textContent = d.averageEntropy.toFixed(4);
+            document.getElementById('diagPerplexity').textContent = d.estimatedPerplexity.toFixed(2);
+
+            // Memory
+            document.getElementById('diagModelMem').textContent = d.modelMemory;
+            document.getElementById('diagCtxMem').textContent = d.contextMemory;
+
+            // Sampling params
+            document.getElementById('diagTemp').textContent = d.temperature.toFixed(2);
+            document.getElementById('diagTopP').textContent = d.topP.toFixed(2);
+            document.getElementById('diagTopK').textContent = d.topK;
+            document.getElementById('diagRepeat').textContent = d.repeatPenalty.toFixed(2);
+
+            // Token stream
+            if (d.recentTokens && d.recentTokens.length > 0) {
+                const tokenStream = document.getElementById('tokenStream');
+                tokenStream.innerHTML = d.recentTokens.map(t => {
+                    let probClass = 'low-prob';
+                    if (t.probability > 0.5) probClass = 'high-prob';
+                    else if (t.probability > 0.2) probClass = 'med-prob';
+
+                    const displayText = t.text.replace(/\n/g, '\\n').replace(/ /g, '\u00B7');
+                    return `<span class="token-chip ${probClass}" title="ID: ${t.tokenId}, LogProb: ${t.logProbability}">${displayText}<span class="prob">${(t.probability * 100).toFixed(1)}%</span></span>`;
+                }).join('');
+            }
+
+            // Top candidates visualization
+            if (d.lastTokenCandidates && d.lastTokenCandidates.length > 0) {
+                const topCandidates = document.getElementById('topCandidates');
+                const lastToken = d.recentTokens && d.recentTokens.length > 0 ? d.recentTokens[d.recentTokens.length - 1] : null;
+                const selectedTokenId = lastToken ? lastToken.tokenId : -1;
+
+                topCandidates.innerHTML = d.lastTokenCandidates.map((c, i) => {
+                    const isSelected = c.tokenId === selectedTokenId;
+                    const displayText = c.text.replace(/\n/g, '\\n').replace(/ /g, '\u00B7');
+                    const probPercent = (c.probability * 100);
+                    const barWidth = Math.min(probPercent, 100);
+
+                    return `<div class="candidate-row ${isSelected ? 'selected' : ''}">
+                        <span class="candidate-rank">${i + 1}</span>
+                        <span class="candidate-token" title="Token ID: ${c.tokenId}">${displayText || '[empty]'}</span>
+                        <div class="candidate-prob-bar">
+                            <div class="candidate-prob-fill" style="width: ${barWidth}%"></div>
+                        </div>
+                        <span class="candidate-prob">${c.percentDisplay}</span>
+                    </div>`;
+                }).join('');
+            }
+        } catch (error) {
+            console.error('Error updating diagnostics:', error);
+        }
+    }
+
+    async function loadSettings() {
+        try {
+            const response = await fetch('/Chat/GetSettings');
+            const data = await response.json();
+            currentSettings = data;
+            stopSequences = Array.isArray(data.runtimeSettings?.stopSequences) && data.runtimeSettings.stopSequences.length > 0
+                ? data.runtimeSettings.stopSequences
+                : ["User:", "\nUser:", "Human:", "\nHuman:"];
+
+            // Update model info
+            const modelPath = data.modelSettings.modelPath || '';
+            const modelName = modelPath.split(/[/\\]/).pop() || 'Unknown';
+            document.getElementById('modelName').textContent = modelName;
+            document.getElementById('modelName').title = modelPath;
+            document.getElementById('contextSize').textContent = data.modelSettings.contextSize;
+            document.getElementById('gpuLayers').textContent = data.modelSettings.gpuLayerCount;
+
+            // Update sliders
+            setSliderValue('maxTokens', data.runtimeSettings.maxTokens);
+            setSliderValue('temperature', data.runtimeSettings.temperature);
+            setSliderValue('topP', data.runtimeSettings.topP);
+            setSliderValue('topK', data.runtimeSettings.topK);
+            setSliderValue('minP', data.runtimeSettings.minP);
+            setSliderValue('repeatPenalty', data.runtimeSettings.repeatPenalty);
+            setSliderValue('repeatLastN', data.runtimeSettings.repeatLastN);
+            setSliderValue('frequencyPenalty', data.runtimeSettings.frequencyPenalty);
+            setSliderValue('presencePenalty', data.runtimeSettings.presencePenalty);
+
+            document.getElementById('seed').value = data.runtimeSettings.seed;
+            document.getElementById('seedValue').textContent = data.runtimeSettings.seed;
+            document.getElementById('systemPrompt').value = data.runtimeSettings.systemPrompt || '';
+        } catch (error) {
+            console.error('Error loading settings:', error);
+        }
+    }
+
+    async function loadLoadSettings() {
+        try {
+            const response = await fetch('/Settings/GetLlm');
+            if (!response.ok) throw new Error(`Status ${response.status}`);
+            const data = await response.json();
+            loadSettingsState = data;
+            renderLoadSettings(data);
+            updateModelInfoFromLoad(data);
+        } catch (error) {
+            console.error('Error loading load-settings:', error);
+            logEvent(`Error loading load-settings: ${error.message}`);
+        }
+    }
+
+    function updateModelInfoFromLoad(s) {
+        if (!s) return;
+        document.getElementById('contextSize').textContent = s.contextLength ?? '-';
+        document.getElementById('gpuLayers').textContent = s.gpuOffloadLayers ?? '-';
+    }
+
+    function renderLoadSettings(s) {
+        if (!s) return;
+        setLoadSlider('lsContextLength', 'lsContextValue', s.contextLength || 4096);
+        setLoadSlider('lsGpuLayers', 'lsGpuValue', s.gpuOffloadLayers || 0);
+        setLoadSlider('lsThreads', 'lsThreadsValue', s.cpuThreadPoolSize ?? -1);
+        setLoadSlider('lsBatch', 'lsBatchValue', s.evaluationBatchSize || 512);
+
+        setLoadCheckbox('lsCpuOnly', s.cpuOnly);
+        setLoadCheckbox('lsKvOffload', s.offloadKvCacheToGpu);
+        setLoadCheckbox('lsKeepInMemory', s.keepModelInMemory);
+        setLoadCheckbox('lsMmap', s.tryMmap);
+        setLoadCheckbox('lsMlock', s.useMlock);
+        setLoadCheckbox('lsFlash', s.flashAttention);
+        setLoadCheckbox('lsRandomSeed', s.randomSeed);
+
+        document.getElementById('lsSeed').value = s.seed ?? 0;
+
+        setLoadCheckbox('lsRopeBaseEnabled', s.ropeFrequencyBaseEnabled);
+        document.getElementById('lsRopeBase').value = s.ropeFrequencyBase ?? '';
+
+        setLoadCheckbox('lsRopeScaleEnabled', s.ropeFrequencyScaleEnabled);
+        document.getElementById('lsRopeScale').value = s.ropeFrequencyScale ?? '';
+
+        setLoadCheckbox('lsKCacheEnabled', s.kCacheQuantTypeEnabled);
+        document.getElementById('lsKCacheType').value = s.kCacheQuantType ?? '';
+        setLoadCheckbox('lsVCacheEnabled', s.vCacheQuantTypeEnabled);
+        document.getElementById('lsVCacheType').value = s.vCacheQuantType ?? '';
+
+        document.getElementById('lsDomain').value = s.overrideDomainType || 'No Override';
+
+        applyLoadDependencies();
+    }
+
+    function setLoadSlider(sliderId, valueId, value) {
+        const slider = document.getElementById(sliderId);
+        const valueEl = document.getElementById(valueId);
+        slider.value = value;
+        valueEl.textContent = value;
+    }
+
+    function setLoadCheckbox(id, val) {
+        const el = document.getElementById(id);
+        el.checked = !!val;
+    }
+
+    function updateLoadSlider(sliderId, valueId) {
+        const slider = document.getElementById(sliderId);
+        const valueEl = document.getElementById(valueId);
+        valueEl.textContent = slider.value;
+    }
+
+    function applyLoadDependencies() {
+        const cpuOnly = document.getElementById('lsCpuOnly').checked;
+        const randomSeed = document.getElementById('lsRandomSeed').checked;
+        const ropeBaseEnabled = document.getElementById('lsRopeBaseEnabled').checked;
+        const ropeScaleEnabled = document.getElementById('lsRopeScaleEnabled').checked;
+        const kCacheEnabled = document.getElementById('lsKCacheEnabled').checked;
+        const vCacheEnabled = document.getElementById('lsVCacheEnabled').checked;
+
+        const gpuControls = [document.getElementById('lsGpuLayers'), document.getElementById('lsKvOffload')];
+        gpuControls.forEach(c => c.disabled = cpuOnly);
+
+        const seedInput = document.getElementById('lsSeed');
+        seedInput.disabled = randomSeed;
+        seedInput.style.opacity = randomSeed ? '0.5' : '1';
+
+        document.getElementById('lsRopeBase').disabled = !ropeBaseEnabled;
+        document.getElementById('lsRopeScale').disabled = !ropeScaleEnabled;
+        document.getElementById('lsKCacheType').disabled = !kCacheEnabled;
+        document.getElementById('lsVCacheType').disabled = !vCacheEnabled;
+    }
+
+    function collectLoadSettings() {
+        const toInt = (id) => parseInt(document.getElementById(id).value, 10);
+        const toFloat = (id) => {
+            const v = parseFloat(document.getElementById(id).value);
+            return isNaN(v) ? null : v;
+        };
+        const getCheckbox = (id) => document.getElementById(id).checked;
+
+        const payload = {
+            contextLength: toInt('lsContextLength'),
+            gpuOffloadLayers: toInt('lsGpuLayers'),
+            cpuThreadPoolSize: toInt('lsThreads'),
+            evaluationBatchSize: toInt('lsBatch'),
+            cpuOnly: getCheckbox('lsCpuOnly'),
+            offloadKvCacheToGpu: getCheckbox('lsKvOffload'),
+            keepModelInMemory: getCheckbox('lsKeepInMemory'),
+            tryMmap: getCheckbox('lsMmap'),
+            useMlock: getCheckbox('lsMlock'),
+            flashAttention: getCheckbox('lsFlash'),
+            randomSeed: getCheckbox('lsRandomSeed'),
+            seed: toInt('lsSeed'),
+            ropeFrequencyBaseEnabled: getCheckbox('lsRopeBaseEnabled'),
+            ropeFrequencyBase: toFloat('lsRopeBase'),
+            ropeFrequencyScaleEnabled: getCheckbox('lsRopeScaleEnabled'),
+            ropeFrequencyScale: toFloat('lsRopeScale'),
+            kCacheQuantTypeEnabled: getCheckbox('lsKCacheEnabled'),
+            kCacheQuantType: document.getElementById('lsKCacheType').value,
+            vCacheQuantTypeEnabled: getCheckbox('lsVCacheEnabled'),
+            vCacheQuantType: document.getElementById('lsVCacheType').value,
+            overrideDomainType: document.getElementById('lsDomain').value
+        };
+
+        if (payload.cpuOnly) {
+            payload.gpuOffloadLayers = 0;
+            payload.offloadKvCacheToGpu = false;
+        }
+
+        return payload;
+    }
+
+    async function saveLoadSettings() {
+        const payload = collectLoadSettings();
+        applyLoadDependencies();
+
+        try {
+            const response = await fetch('/Settings/SaveLlm', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+
+            const data = await response.json();
+            if (!response.ok || !data.ok) {
+                addMessage('Load settings failed to save. Check debug log.', 'system');
+                logEvent(`Save load-settings error: ${JSON.stringify(data.errors || data)}`);
+                return;
+            }
+
+            loadSettingsState = data.settings;
+            renderLoadSettings(data.settings);
+            updateModelInfoFromLoad(data.settings);
+            addMessage(data.reloaded ? 'Load settings saved (engine reloaded).' : 'Load settings saved.', 'system');
+            logEvent(data.reloaded ? 'Engine reloaded after load-settings change.' : 'Load-settings saved.');
+        } catch (error) {
+            addMessage('Load settings failed to save. Check debug log.', 'system');
+            logEvent(`Save load-settings error: ${error.message}`);
+        }
+    }
+
+    function setSliderValue(id, value) {
+        const slider = document.getElementById(id);
+        slider.value = value;
+        updateSlider(id);
+    }
+
+    async function applySettings() {
+        const settings = {
+            maxTokens: parseInt(document.getElementById('maxTokens').value),
+            temperature: parseFloat(document.getElementById('temperature').value),
+            topP: parseFloat(document.getElementById('topP').value),
+            topK: parseInt(document.getElementById('topK').value),
+            minP: parseFloat(document.getElementById('minP').value),
+            repeatPenalty: parseFloat(document.getElementById('repeatPenalty').value),
+            repeatLastN: parseInt(document.getElementById('repeatLastN').value),
+            frequencyPenalty: parseFloat(document.getElementById('frequencyPenalty').value),
+            presencePenalty: parseFloat(document.getElementById('presencePenalty').value),
+            seed: parseInt(document.getElementById('seed').value),
+            systemPrompt: document.getElementById('systemPrompt').value,
+            stopSequences: currentSettings?.runtimeSettings?.stopSequences || ["User:", "\nUser:", "Human:", "\nHuman:"]
+        };
+
+        try {
+            const response = await fetch('/Chat/UpdateSettings', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(settings)
+            });
+
+            if (response.ok) {
+                const data = await response.json();
+                currentSettings.runtimeSettings = data.settings;
+                if (Array.isArray(data.settings?.stopSequences) && data.settings.stopSequences.length > 0) {
+                    stopSequences = data.settings.stopSequences;
+                }
+                addMessage('Settings applied.', 'system');
+            }
+        } catch (error) {
+            console.error('Error applying settings:', error);
+        }
+    }
+
+    async function resetSettings() {
+        try {
+            const response = await fetch('/Chat/ResetSettings', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' }
+            });
+
+            if (response.ok) {
+                await loadSettings();
+                addMessage('Settings reset.', 'system');
+            }
+        } catch (error) {
+            console.error('Error resetting settings:', error);
+        }
+    }
+
+    function hideWelcome() {
+        const welcomeScreen = document.getElementById('welcomeScreen');
+        if (welcomeVisible && welcomeScreen) {
+            welcomeScreen.remove();
+            welcomeVisible = false;
+        }
+    }
+
+    function addMessage(content, role) {
+        hideWelcome();
+        const messageDiv = document.createElement('div');
+        messageDiv.className = 'message ' + role;
+        messageDiv.textContent = content;
+        chatMessages.appendChild(messageDiv);
+        chatMessages.scrollTop = chatMessages.scrollHeight;
+        return messageDiv;
+    }
+
+    function showTyping() {
+        hideWelcome();
+        const typing = document.createElement('div');
+        typing.className = 'typing-indicator';
+        typing.id = 'typingIndicator';
+        typing.innerHTML = '<span></span><span></span><span></span>';
+        chatMessages.appendChild(typing);
+        chatMessages.scrollTop = chatMessages.scrollHeight;
+    }
+
+    function hideTyping() {
+        const typing = document.getElementById('typingIndicator');
+        if (typing) typing.remove();
+    }
+
+    async function sendMessage() {
+        const message = chatInput.value.trim();
+        if (!message || isProcessing) return;
+
+        logEvent(`Send -> "${message}" (streaming=${isStreaming}, RAG=${useRag})`);
+        isProcessing = true;
+        sendBtn.disabled = true;
+        chatInput.value = '';
+        chatInput.style.height = 'auto';
+        setStatus('loading', 'Thinking...');
+
+        addMessage(message, 'user');
+        showTyping();
+
+        // Clear token stream
+        document.getElementById('tokenStream').innerHTML = '<span style="color: #9ca3af; font-size: 0.75rem;">Generating...</span>';
+
+        try {
+            if (isStreaming) {
+                await sendStreamingMessage(message);
+            } else {
+                await sendRegularMessage(message);
+            }
+            setStatus('', 'Ready');
+        } catch (error) {
+            console.error('Error:', error);
+            logEvent(`Error: ${error.message}`);
+            hideTyping();
+            addMessage('Error: ' + error.message, 'system');
+            setStatus('error', 'Error');
+        } finally {
+            isProcessing = false;
+            sendBtn.disabled = false;
+            chatInput.focus();
+        }
+    }
+
+    let stopSequences = ["User:", "\nUser:", "Human:", "\nHuman:"];
+
+    async function sendRegularMessage(message) {
+        logEvent(`Sending regular request... (RAG=${useRag})`);
+        const response = await fetch('/Chat/Send', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ message, sessionId, useRag })
+        });
+
+        hideTyping();
+
+        if (!response.ok) {
+            const err = await response.json();
+            const msg = err.error || 'Failed to send message';
+            logEvent(`Error (regular): ${msg}`);
+            throw new Error('An error occurred. Check debug log.');
+        }
+
+        const data = await response.json();
+        sessionId = data.sessionId;
+        logEvent(`Regular response len=${(data.response || '').length}`);
+        addMessage(sanitizeAssistantText(data.response), 'assistant');
+    }
+
+    async function sendStreamingMessage(message) {
+        logEvent(`Opening stream (RAG=${useRag})...`);
+        const response = await fetch(
+            `/Chat/SendStream?message=${encodeURIComponent(message)}&sessionId=${encodeURIComponent(sessionId)}&useRag=${useRag}`
+        );
+
+        hideTyping();
+        const messageDiv = addMessage('', 'assistant');
+
+        if (!response.ok) {
+            const warning = formatContentWarning();
+            messageDiv.textContent = warning;
+            logEvent(`Stream failed (${response.status})`);
+            return;
+        }
+
+        const reader = response.body.getReader();
+        const decoder = new TextDecoder();
+        let fullResponse = '';
+        let tokenCount = 0;
+        let streamHadError = false;
+
+        while (true) {
+            const { done, value } = await reader.read();
+            if (done) break;
+
+            const chunk = decoder.decode(value);
+            const lines = chunk.split('\n');
+
+            for (const line of lines) {
+                if (line.startsWith('data: ')) {
+                    const data = line.slice(6);
+                    if (data === '[DONE]') continue;
+
+                    try {
+                        const parsed = JSON.parse(data);
+                        if (parsed.token) {
+                            fullResponse += parsed.token;
+                            messageDiv.textContent = sanitizeAssistantText(fullResponse);
+                            chatMessages.scrollTop = chatMessages.scrollHeight;
+                            tokenCount++;
+                            if (tokenCount === 1 || tokenCount % 10 === 0) {
+                                logEvent(`Stream tokens received: ${tokenCount}`);
+                            }
+                        }
+                        if (parsed.error) {
+                            const warning = formatContentWarning();
+                            messageDiv.textContent = warning;
+                            logEvent(`Stream error: ${parsed.error}`);
+                            streamHadError = true;
+                            break;
+                        }
+                    } catch (e) {
+                        if (data !== '[DONE]') console.warn('Parse error:', e);
+                    }
+                }
+            }
+
+            if (streamHadError) break;
+        }
+
+        if (streamHadError) {
+            return;
+        }
+
+        fullResponse = sanitizeAssistantText(fullResponse);
+
+        if (fullResponse.length === 0) {
+            const warning = formatContentWarning();
+            messageDiv.textContent = warning;
+            logEvent('Stream ended with no content.');
+        } else {
+            messageDiv.textContent = fullResponse;
+        }
+
+        logEvent(`Stream complete, tokens=${tokenCount}, len=${fullResponse.length}`);
+    }
+
+    function clearChat() {
+        fetch('/Chat/ClearSession', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(sessionId)
+        }).then(() => {
+            chatMessages.innerHTML = `
+                <div class="welcome-container" id="welcomeScreen">
+                    <div class="welcome-icon">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <circle cx="12" cy="12" r="10"/>
+                            <path d="M8 14s1.5 2 4 2 4-2 4-2"/>
+                            <line x1="9" y1="9" x2="9.01" y2="9"/>
+                            <line x1="15" y1="9" x2="15.01" y2="9"/>
+                        </svg>
+                    </div>
+                    <h2>Chat cleared</h2>
+                    <p>Start a new conversation.</p>
+                </div>
+            `;
+            welcomeVisible = true;
+            sessionId = crypto.randomUUID();
+        });
+    }
+</script>
+}
+
+
